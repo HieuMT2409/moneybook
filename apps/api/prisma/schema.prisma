@@ -1,0 +1,247 @@
+// MONEYBOOK database schema.
+// Money columns use Decimal(19,2) -> never floating point.
+// Dates that represent a calendar day (not an instant) use @db.Date to avoid timezone drift.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url       = env("DATABASE_URL") // runtime queries (Supabase: transaction pooler, port 6543)
+  directUrl = env("DIRECT_URL")   // Prisma CLI: migrate / db push / seed (Supabase: session pooler or direct, port 5432)
+}
+
+enum AccountType {
+  CASH
+  BANK
+  EWALLET
+  CREDIT_CARD
+  OTHER
+}
+
+enum CategoryType {
+  INCOME
+  EXPENSE
+}
+
+// Transfers live in their own table (Transfer), so a Transaction is only income or expense.
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum DebtType {
+  LEND   // I lent money -> receivable (asset)
+  BORROW // I borrowed money -> payable (liability)
+}
+
+enum DebtStatus {
+  OPEN
+  SETTLED
+}
+
+enum RecurringFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String
+  avatar       String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  accounts              Account[]
+  categories            Category[]
+  transactions          Transaction[]
+  transfers             Transfer[]
+  budgets               Budget[]
+  debts                 Debt[]
+  debtPayments          DebtPayment[]
+  recurringTransactions RecurringTransaction[]
+
+  @@map("users")
+}
+
+model Account {
+  id             String      @id @default(uuid()) @db.Uuid
+  userId         String      @map("user_id") @db.Uuid
+  name           String
+  type           AccountType
+  initialBalance Decimal     @default(0) @map("initial_balance") @db.Decimal(19, 2)
+  // Denormalized running balance. Only ever changed with atomic increment/decrement inside a DB transaction.
+  balance        Decimal     @default(0) @db.Decimal(19, 2)
+  currency       String      @default("VND") @db.VarChar(3)
+  isActive       Boolean     @default(true) @map("is_active")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions          Transaction[]
+  transfersOut          Transfer[]             @relation("TransferFrom")
+  transfersIn           Transfer[]             @relation("TransferTo")
+  debtPayments          DebtPayment[]
+  recurringTransactions RecurringTransaction[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Category {
+  id        String       @id @default(uuid()) @db.Uuid
+  userId    String       @map("user_id") @db.Uuid
+  name      String
+  type      CategoryType
+  icon      String?
+  color     String?
+  isDefault Boolean      @default(false) @map("is_default")
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions          Transaction[]
+  budgets               Budget[]
+  recurringTransactions RecurringTransaction[]
+
+  @@unique([userId, type, name])
+  @@index([userId])
+  @@map("categories")
+}
+
+model Transaction {
+  id              String          @id @default(uuid()) @db.Uuid
+  userId          String          @map("user_id") @db.Uuid
+  accountId       String          @map("account_id") @db.Uuid
+  categoryId      String          @map("category_id") @db.Uuid
+  recurringId     String?         @map("recurring_id") @db.Uuid
+  type            TransactionType
+  amount          Decimal         @db.Decimal(19, 2) // always > 0; direction comes from `type`
+  note            String?
+  transactionDate DateTime        @map("transaction_date") @db.Date
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account   Account               @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  category  Category              @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  recurring RecurringTransaction? @relation(fields: [recurringId], references: [id], onDelete: SetNull)
+
+  @@index([userId, transactionDate(sort: Desc)])
+  @@index([userId, accountId])
+  @@index([userId, categoryId, transactionDate])
+  @@index([recurringId])
+  @@map("transactions")
+}
+
+model Transfer {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  fromAccountId   String   @map("from_account_id") @db.Uuid
+  toAccountId     String   @map("to_account_id") @db.Uuid
+  amount          Decimal  @db.Decimal(19, 2)
+  note            String?
+  transactionDate DateTime @map("transaction_date") @db.Date
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fromAccount Account @relation("TransferFrom", fields: [fromAccountId], references: [id], onDelete: Restrict)
+  toAccount   Account @relation("TransferTo", fields: [toAccountId], references: [id], onDelete: Restrict)
+
+  @@index([userId, transactionDate(sort: Desc)])
+  @@index([fromAccountId])
+  @@index([toAccountId])
+  @@map("transfers")
+}
+
+model Budget {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  categoryId String   @map("category_id") @db.Uuid
+  amount     Decimal  @db.Decimal(19, 2)
+  month      Int // 1-12
+  year       Int
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, categoryId, month, year])
+  @@index([userId, year, month])
+  @@map("budgets")
+}
+
+model Debt {
+  id          String     @id @default(uuid()) @db.Uuid
+  userId      String     @map("user_id") @db.Uuid
+  personName  String     @map("person_name")
+  type        DebtType
+  totalAmount Decimal    @map("total_amount") @db.Decimal(19, 2)
+  // Denormalized sum of DebtPayment.amount, updated in the same DB transaction as the payment.
+  paidAmount  Decimal    @default(0) @map("paid_amount") @db.Decimal(19, 2)
+  dueDate     DateTime?  @map("due_date") @db.Date
+  note        String?
+  status      DebtStatus @default(OPEN)
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments DebtPayment[]
+
+  @@index([userId, status])
+  @@map("debts")
+}
+
+model DebtPayment {
+  id        String   @id @default(uuid()) @db.Uuid
+  debtId    String   @map("debt_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  // Optional: if set, the payment also moves money in/out of this account.
+  accountId String?  @map("account_id") @db.Uuid
+  amount    Decimal  @db.Decimal(19, 2)
+  paidAt    DateTime @map("paid_at") @db.Date
+  note      String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  debt    Debt     @relation(fields: [debtId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account Account? @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@index([debtId])
+  @@index([userId])
+  @@map("debt_payments")
+}
+
+model RecurringTransaction {
+  id         String             @id @default(uuid()) @db.Uuid
+  userId     String             @map("user_id") @db.Uuid
+  accountId  String             @map("account_id") @db.Uuid
+  categoryId String             @map("category_id") @db.Uuid
+  type       TransactionType
+  amount     Decimal            @db.Decimal(19, 2)
+  frequency  RecurringFrequency
+  // Anchor day so "monthly on the 31st" clamps to the last day of shorter months without drifting.
+  dayOfMonth Int?               @map("day_of_month")
+  nextRunAt  DateTime           @map("next_run_at") @db.Date
+  endDate    DateTime?          @map("end_date") @db.Date
+  note       String?
+  isActive   Boolean            @default(true) @map("is_active")
+  createdAt  DateTime           @default(now()) @map("created_at")
+  updatedAt  DateTime           @updatedAt @map("updated_at")
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account      Account       @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  category     Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  transactions Transaction[]
+
+  @@index([isActive, nextRunAt])
+  @@index([userId])
+  @@map("recurring_transactions")
+}
