@@ -8,7 +8,7 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
-import { api, errorMessage, tokenStore } from '@/lib/api';
+import { api, errorMessage, tokenStore, wakeServer } from '@/lib/api';
 import type { User } from '@/lib/types';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
@@ -37,6 +37,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'register' }) {
 
   useEffect(() => {
     if (tokenStore.get()) router.replace('/dashboard');
+    else wakeServer();
   }, [router]);
 
   const onSubmit = handleSubmit(async (values) => {

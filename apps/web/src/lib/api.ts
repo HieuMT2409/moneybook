@@ -1,5 +1,8 @@
+import { toast } from 'sonner';
+
 const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001').replace(/\/$/, '');
 const TOKEN_KEY = 'moneybook_token';
+const WAKE_TOAST = 'api-waking-up';
 
 // MVP trade-off: the JWT lives in localStorage. For hardened production use an httpOnly cookie (see roadmap).
 export const tokenStore = {
@@ -35,6 +38,8 @@ function buildUrl(path: string, query?: Query): string {
 export async function api<T>(path: string, { method = 'GET', body, query }: RequestOptions = {}): Promise<T> {
   const token = tokenStore.get();
   let response: Response;
+  // Free hosting puts the API to sleep when idle; the first request can take ~1 minute. Tell the user why.
+  const wakeTimer = setTimeout(() => toast.loading('Máy chủ đang khởi động, vui lòng chờ khoảng 1 phút…', { id: WAKE_TOAST }), 4000);
   try {
     response = await fetch(buildUrl(path, query), {
       method,
@@ -46,6 +51,9 @@ export async function api<T>(path: string, { method = 'GET', body, query }: Requ
     });
   } catch {
     throw new ApiError('Không kết nối được máy chủ. Vui lòng thử lại.', 0);
+  } finally {
+    clearTimeout(wakeTimer);
+    toast.dismiss(WAKE_TOAST);
   }
 
   const payload = (await response.json().catch(() => null)) as
@@ -67,4 +75,9 @@ export async function api<T>(path: string, { method = 'GET', body, query }: Requ
 export function errorMessage(error: unknown): string {
   if (error instanceof ApiError) return error.errors?.length ? error.errors.join('\n') : error.message;
   return error instanceof Error ? error.message : 'Đã xảy ra lỗi không xác định';
+}
+
+/** Fire-and-forget request that wakes a sleeping API while the user is still typing their password. */
+export function wakeServer(): void {
+  void fetch(`${BASE_URL}/health`, { cache: 'no-store' }).catch(() => undefined);
 }
