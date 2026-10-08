@@ -20,6 +20,7 @@
 - Sổ nợ (cho vay/đi vay), ghi nhận trả nợ từng đợt (tùy chọn ghi vào ví)
 - Giao dịch định kỳ (ngày/tuần/tháng/năm) với bù các kỳ bị lỡ
 - Dashboard (4 biểu đồ) và báo cáo: tháng, danh mục, dòng tiền, tài sản ròng; chọn khoảng thời gian
+- **Việc cần làm (todo)** với giờ hẹn và **thông báo đẩy (Web Push)** đúng giờ, hoạt động cả khi đã đóng app
 - Responsive, thanh điều hướng dưới + nút `+` nổi trên mobile
 
 ## 3. Architecture
@@ -96,6 +97,8 @@ Swagger UI: `http://localhost:3001/docs` (nút **Authorize** để dán JWT). T�
 | Recurring | `GET/POST /recurring` · `POST /recurring/run` · `PATCH/DELETE /recurring/:id` |
 | Reports | `GET /reports/monthly` · `/categories` · `/cash-flow` · `/net-worth` (`?range=this_month\|last_month\|last_3_months\|last_6_months\|this_year\|custom&from&to`) |
 | Dashboard | `GET /dashboard` |
+| Todos | `GET/POST /todos` · `PATCH/DELETE /todos/:id` |
+| Push | `GET /push/public-key` · `POST/DELETE /push/subscribe` · `POST /push/test` |
 | Health | `GET /health` |
 
 ## 7. Environment variables
@@ -110,6 +113,7 @@ Swagger UI: `http://localhost:3001/docs` (nút **Authorize** để dán JWT). T�
 | `JWT_EXPIRES_IN` | Hạn token, mặc định `1d` |
 | `CORS_ORIGIN` | Origin của web, nhiều giá trị cách nhau bằng dấu phẩy |
 | `PORT` | Mặc định `3001` |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | Khóa Web Push (xem mục 8c). Bỏ trống = tắt thông báo đẩy |
 
 `apps/web/.env.local`: `NEXT_PUBLIC_API_URL` (URL API, được nhúng lúc build).
 
@@ -173,6 +177,22 @@ npm run db:seed                       # tùy chọn: dữ liệu demo
 
 Lưu ý: không dùng Supabase Auth/Storage, chỉ dùng như PostgreSQL; đăng nhập do API xử lý. Free project có thể bị tạm dừng sau thời gian không hoạt động.
 
+## 8c. Thông báo nhắc việc (Web Push)
+
+Cách hoạt động: mỗi phút API quét các việc đã đến giờ nhắc (`remindAt <= now`), "claim" bằng cách đặt `notifiedAt` (nên không bao giờ gửi trùng), rồi đẩy thông báo tới mọi thiết bị đã đăng ký. Service worker (`apps/web/public/sw.js`) hiển thị thông báo và mở trang `/todos` khi chạm vào.
+
+1. Tạo khóa (một lần): `npm run vapid:generate -w apps/api`, rồi đặt `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT=mailto:email-của-bạn` vào `apps/api/.env` và trên Render. **Đừng đổi khóa sau này**, nếu không mọi thiết bị phải bật lại thông báo.
+2. Tạo bảng mới: `npm run db:migrate -- --name add_todos_push`.
+3. Supabase: chạy lại `apps/api/prisma/supabase-rls.sql` (an toàn khi chạy lại) để bật RLS cho `todos` và `push_subscriptions`.
+4. Trong app: **Cài đặt → Thông báo nhắc việc → Bật thông báo** (hoặc từ banner ở trang Việc cần làm).
+
+Yêu cầu theo thiết bị:
+- **Android (Chrome):** hoạt động ngay, cả khi chưa cài app.
+- **iPhone/iPad (iOS 16.4+):** phải *Thêm vào Màn hình chính* rồi mở app từ biểu tượng đó mới bật được thông báo.
+- Máy tính: Chrome, Edge, Firefox đều được.
+
+Độ chính xác: thông báo được gửi trong vòng ~1 phút kể từ giờ nhắc **khi API đang chạy**. Render free ngủ sau 15 phút không có truy cập, vì vậy cần ping `/health` mỗi 10 phút (hoặc dùng gói trả phí). Nếu API ngủ, nhắc nhở sẽ được gửi bù ngay khi nó thức dậy. Khi thông báo đẩy chưa bật, app vẫn hiện toast nhắc việc lúc đang mở.
+
 ## 9. Docker setup
 
 ```bash
@@ -185,7 +205,7 @@ Web: http://localhost:3000 · API: http://localhost:3001/docs. Container API t�
 ## 10. Testing
 
 ```bash
-npm test            # 54 test, không cần database
+npm test            # 66 test, không cần database
 npm run typecheck && npm run lint
 ```
 
@@ -223,5 +243,6 @@ Thêm ảnh vào `docs/screenshots/` (dashboard, transactions, budgets, reports,
 - Refresh token + httpOnly cookie, rate limiting đăng nhập
 - Đa tiền tệ + tỷ giá; biểu đồ tài sản ròng theo thời gian
 - Import/export CSV, đính kèm hóa đơn
+- Việc lặp lại (hằng ngày/tuần), nhắc nhở nhiều lần, thông báo vượt ngân sách / nợ đến hạn
 - Giao dịch chia nhỏ (split), thẻ (tags), mục tiêu tiết kiệm
 - i18n (thông báo lỗi API hiện bằng tiếng Anh), dark mode, PWA

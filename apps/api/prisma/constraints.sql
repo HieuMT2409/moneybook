@@ -8,3 +8,4 @@ ALTER TABLE "budgets"             ADD CONSTRAINT "budgets_month_range"          
 ALTER TABLE "debts"               ADD CONSTRAINT "debts_amounts_valid"                 CHECK ("total_amount" > 0 AND "paid_amount" >= 0 AND "paid_amount" <= "total_amount");
 ALTER TABLE "debt_payments"       ADD CONSTRAINT "debt_payments_amount_positive"       CHECK ("amount" > 0);
 ALTER TABLE "recurring_transactions" ADD CONSTRAINT "recurring_amount_positive"        CHECK ("amount" > 0);
+ALTER TABLE "todos"               ADD CONSTRAINT "todos_remind_valid"                  CHECK ("remind_before_minutes" >= 0);

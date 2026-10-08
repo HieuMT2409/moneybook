@@ -13,4 +13,6 @@ ALTER TABLE "budgets"                ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "debts"                  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "debt_payments"          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "recurring_transactions" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "todos"                  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "push_subscriptions"     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "_prisma_migrations"     ENABLE ROW LEVEL SECURITY;

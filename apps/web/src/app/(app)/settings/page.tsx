@@ -2,6 +2,7 @@
 
 import { LogOut } from 'lucide-react';
 import { CategoriesSection } from '@/components/categories-section';
+import { NotificationsCard } from '@/components/notifications-card';
 import { PageHeader } from '@/components/page-header';
 import { RecurringSection } from '@/components/recurring-section';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,7 @@ export default function SettingsPage() {
             <Button variant="outline" onClick={logout}><LogOut className="h-4 w-4" /> Đăng xuất</Button>
           </CardContent>
         </Card>
+        <NotificationsCard />
         <CategoriesSection />
         <RecurringSection />
       </div>

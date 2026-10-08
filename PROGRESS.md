@@ -14,6 +14,8 @@
 | 9 | Testing | ✅ 54 unit/e2e test, no DB needed |
 | 10 | Docker + CI + README | ✅ |
 | FE | Next.js UI (all pages) | ✅ `next build` OK |
+| +PWA | Manifest, icons, wake-server UX | ✅ |
+| +Todo | Todo list + Web Push reminders (66 tests) | ✅ code, needs migration + VAPID keys + real-device test |
 
 ## Verified in the build sandbox
 - API: `tsc`, `eslint`, `jest` (54 pass), `nest build`
@@ -27,6 +29,14 @@
 - [ ] Optional: apply `prisma/constraints.sql` as an extra migration (README §8)
 - [ ] `docker compose up --build`
 - [ ] Add screenshots to `docs/screenshots/`
+
+## Todo + push (new) — do on your machine
+- [ ] `npm run vapid:generate -w apps/api` -> set VAPID_* in apps/api/.env and on Render
+- [ ] `npm run db:migrate -- --name add_todos_push` (commit the migration)
+- [ ] Re-run `prisma/supabase-rls.sql` in Supabase SQL Editor
+- [ ] On the phone: install the PWA, Settings -> enable notifications -> "Gửi thử"
+- [ ] Create a todo due in 2 minutes with the app closed; confirm the notification arrives
+- Reminders need the API awake: keep the 10-minute `/health` ping running.
 
 ## Supabase
 - Schema now has `directUrl = env("DIRECT_URL")` -> both `DATABASE_URL` and `DIRECT_URL` must be set (locally they can be identical).
