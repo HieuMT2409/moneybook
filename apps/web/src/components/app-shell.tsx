@@ -4,8 +4,8 @@ import { ArrowLeftRight, BarChart3, HandCoins, LayoutDashboard, ListTodo, LogOut
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuthGate, useLogout } from '@/lib/auth';
-import { usePush } from '@/lib/push';
 import { useTodos } from '@/lib/queries';
+import { useNow } from '@/lib/use-now';
 import { useTodoReminderToasts } from '@/lib/use-todo-toasts';
 import { cn } from '@/lib/utils';
 import { TransactionDialogProvider, useTransactionDialog } from './transaction-dialog';
@@ -45,10 +45,10 @@ function Shell({ children }: { children: React.ReactNode }) {
   const logout = useLogout();
   const { openNew } = useTransactionDialog();
   const todos = useTodos('open');
-  const push = usePush();
-  // Fallback reminders while the app is open, only when phone notifications are not active.
-  useTodoReminderToasts(todos.data, push.state !== 'on' && push.state !== 'loading');
-  const dueCount = (todos.data ?? []).filter((t) => t.dueAt !== null && new Date(t.dueAt).getTime() <= Date.now()).length;
+  // In-app toast when a reminder time passes while the app is open (phone notifications work independently).
+  useTodoReminderToasts(todos.data, true);
+  const now = useNow();
+  const dueCount = (todos.data ?? []).filter((t) => t.dueAt !== null && new Date(t.dueAt).getTime() <= now).length;
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   return (

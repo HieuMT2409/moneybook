@@ -35,9 +35,9 @@ export const useBudgets = (month: number, year: number) =>
 export const useDebts = () => useQuery({ queryKey: ['debts'], queryFn: () => api<Debt[]>('/debts') });
 export const useDebtDetail = (id: string, enabled: boolean) =>
   useQuery({ queryKey: ['debt', id], queryFn: () => api<Debt>(`/debts/${id}`), enabled });
-/** Polls every minute so reminders and the "overdue" badge stay fresh while the app is open. */
+/** Polls every 30s (and on tab focus) so reminders and the "overdue" badge stay fresh while the app is open. */
 export const useTodos = (status: 'open' | 'done') =>
-  useQuery({ queryKey: ['todos', status], queryFn: () => api<Todo[]>('/todos', { query: { status } }), refetchInterval: 60_000 });
+  useQuery({ queryKey: ['todos', status], queryFn: () => api<Todo[]>('/todos', { query: { status } }), refetchInterval: 30_000, refetchOnWindowFocus: true });
 export const useRecurring = () => useQuery({ queryKey: ['recurring'], queryFn: () => api<Recurring[]>('/recurring') });
 
 export const useMonthlyReport = (p: ReportParams) =>

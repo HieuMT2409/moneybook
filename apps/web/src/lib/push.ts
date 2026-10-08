@@ -82,5 +82,21 @@ export function usePush() {
     onError: (error) => toast.error(errorMessage(error)),
   });
 
-  return { state: query.data ?? ('loading' as PushState), enable, disable, test };
+  // Shows a notification straight from the service worker, bypassing the server and the push service.
+  // If THIS shows nothing, the problem is the browser/OS notification settings, not MONEYBOOK.
+  const localTest = useMutation({
+    mutationFn: async () => {
+      const registration = await navigator.serviceWorker.getRegistration(SW_URL);
+      if (!registration) throw new Error('Chưa đăng ký service worker. Hãy tắt rồi bật lại thông báo.');
+      await registration.showNotification('MONEYBOOK (thử trên máy)', {
+        body: 'Nếu bạn thấy dòng này, trình duyệt và hệ điều hành đang hiển thị thông báo bình thường.',
+        icon: '/icons/icon-192.png',
+        tag: `local-test-${Date.now()}`, // unique tag so repeated tests are never merged silently
+      });
+    },
+    onSuccess: () => toast.info('Đã yêu cầu hiển thị. Nếu không thấy gì, kiểm tra cài đặt thông báo của Windows/trình duyệt.'),
+    onError: (error) => toast.error(errorMessage(error)),
+  });
+
+  return { state: query.data ?? ('loading' as PushState), enable, disable, test, localTest };
 }

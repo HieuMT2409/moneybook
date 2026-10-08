@@ -46,7 +46,9 @@ export class TodoRemindersService {
         data: { notifiedAt: now },
       });
       if (claimed.count === 0) continue;
-      await this.push.sendToUser(todo.userId, buildReminderPayload(todo, now));
+      const delivered = await this.push.sendToUser(todo.userId, buildReminderPayload(todo, now));
+      // delivered = 0 means the user has no working subscription (or VAPID keys are missing on the API).
+      this.logger.log(`Reminder "${todo.title}" (due ${todo.dueAt?.toISOString() ?? 'n/a'}) -> pushed to ${delivered} device(s)`);
       processed += 1;
     }
     return processed;

@@ -7,7 +7,7 @@ import { Card, CardContent } from './ui/card';
 
 /** Enable/disable push notifications on this device. `hideWhenOn` makes it a banner that disappears once active. */
 export function NotificationsCard({ hideWhenOn = false }: { hideWhenOn?: boolean }) {
-  const { state, enable, disable, test } = usePush();
+  const { state, enable, disable, test, localTest } = usePush();
 
   if (state === 'loading') return null;
   if (hideWhenOn && (state === 'on' || state === 'unsupported')) return null;
@@ -35,6 +35,7 @@ export function NotificationsCard({ hideWhenOn = false }: { hideWhenOn?: boolean
         ) : null}
         {state === 'on' ? (
           <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => localTest.mutate()} disabled={localTest.isPending}>Thử hiển thị</Button>
             <Button variant="outline" size="sm" onClick={() => test.mutate()} disabled={test.isPending}>Gửi thử</Button>
             <Button variant="ghost" size="sm" onClick={() => disable.mutate()} disabled={disable.isPending}>Tắt</Button>
           </div>

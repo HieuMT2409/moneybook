@@ -17,6 +17,7 @@ import { Input, Select } from '@/components/ui/input';
 import { api } from '@/lib/api';
 import { formatDateTime, toLocalInput } from '@/lib/format';
 import { useApiMutation, useTodos } from '@/lib/queries';
+import { useNow } from '@/lib/use-now';
 import type { Todo } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -33,8 +34,8 @@ const schema = z.object({
 });
 type Values = z.infer<typeof schema>;
 
-function groupTodos(todos: Todo[]) {
-  const now = new Date();
+function groupTodos(todos: Todo[], nowMs: number) {
+  const now = new Date(nowMs);
   const startOfTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime();
   const groups = { overdue: [] as Todo[], today: [] as Todo[], upcoming: [] as Todo[], none: [] as Todo[] };
   for (const todo of todos) {
@@ -51,11 +52,12 @@ export default function TodosPage() {
   const [editing, setEditing] = useState<Todo | 'new' | null>(null);
   const [toDelete, setToDelete] = useState<Todo | null>(null);
   const { data, isLoading, error, refetch } = useTodos(tab);
+  const now = useNow();
 
   const toggle = useApiMutation((t: Todo) => api(`/todos/${t.id}`, { method: 'PATCH', body: { isDone: !t.isDone } }));
   const remove = useApiMutation((id: string) => api(`/todos/${id}`, { method: 'DELETE' }), 'Đã xóa việc');
 
-  const groups = groupTodos(tab === 'open' ? (data ?? []) : []);
+  const groups = groupTodos(tab === 'open' ? (data ?? []) : [], now);
   const sections: Array<{ key: string; title: string; items: Todo[]; tone?: string }> = [
     { key: 'overdue', title: 'Quá hạn', items: groups.overdue, tone: 'text-danger' },
     { key: 'today', title: 'Hôm nay', items: groups.today },
@@ -64,7 +66,7 @@ export default function TodosPage() {
   ];
 
   const row = (todo: Todo) => (
-    <TodoRow key={todo.id} todo={todo} busy={toggle.isPending} onToggle={() => toggle.mutate(todo)} onEdit={() => setEditing(todo)} onDelete={() => setToDelete(todo)} />
+    <TodoRow key={todo.id} todo={todo} now={now} busy={toggle.isPending} onToggle={() => toggle.mutate(todo)} onEdit={() => setEditing(todo)} onDelete={() => setToDelete(todo)} />
   );
 
   return (
@@ -115,8 +117,8 @@ export default function TodosPage() {
   );
 }
 
-function TodoRow({ todo, busy, onToggle, onEdit, onDelete }: { todo: Todo; busy: boolean; onToggle: () => void; onEdit: () => void; onDelete: () => void }) {
-  const overdue = !todo.isDone && todo.dueAt !== null && new Date(todo.dueAt).getTime() < Date.now();
+function TodoRow({ todo, now, busy, onToggle, onEdit, onDelete }: { todo: Todo; now: number; busy: boolean; onToggle: () => void; onEdit: () => void; onDelete: () => void }) {
+  const overdue = !todo.isDone && todo.dueAt !== null && new Date(todo.dueAt).getTime() < now;
   return (
     <div className="flex items-start gap-3 px-4 py-3">
       <button

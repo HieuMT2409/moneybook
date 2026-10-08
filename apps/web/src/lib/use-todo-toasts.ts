@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 import type { Todo } from './types';
+import { useNow } from './use-now';
 
 const STORAGE_KEY = 'moneybook_alerted_todos';
 const MAX_AGE_MS = 24 * 60 * 60 * 1000;
@@ -17,16 +18,17 @@ function loadAlerted(): Set<string> {
 }
 
 /**
- * In-app fallback while the app is open: shows a toast when a reminder time passes.
- * Only enabled when push notifications are NOT active (otherwise the phone already notifies the user).
+ * In-app reminder while the app is open: shows a toast when a reminder time passes.
+ * Independent of Web Push, so it works even if system notifications are blocked.
  */
 export function useTodoReminderToasts(todos: Todo[] | undefined, enabled: boolean) {
   const router = useRouter();
+  // Re-run the check as time passes, not only when the todo list changes.
+  const now = useNow(10_000);
 
   useEffect(() => {
     if (!enabled || !todos) return;
     const alerted = loadAlerted();
-    const now = Date.now();
     let changed = false;
 
     for (const todo of todos) {
@@ -45,5 +47,5 @@ export function useTodoReminderToasts(todos: Todo[] | undefined, enabled: boolea
       changed = true;
     }
     if (changed) window.localStorage.setItem(STORAGE_KEY, JSON.stringify([...alerted].slice(-200)));
-  }, [todos, enabled, router]);
+  }, [todos, enabled, router, now]);
 }
