@@ -11,8 +11,10 @@ import { BudgetsModule } from './modules/budgets/budgets.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { DebtsModule } from './modules/debts/debts.module';
+import { PushModule } from './modules/push/push.module';
 import { RecurringModule } from './modules/recurring/recurring.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { TodosModule } from './modules/todos/todos.module';
 import { TransactionsModule } from './modules/transactions/transactions.module';
 import { PrismaModule } from './prisma/prisma.module';
 
@@ -30,6 +32,8 @@ import { PrismaModule } from './prisma/prisma.module';
     RecurringModule,
     ReportsModule,
     DashboardModule,
+    PushModule,
+    TodosModule,
   ],
   controllers: [HealthController],
   // Secure by default: every route needs a JWT unless it is explicitly @Public().

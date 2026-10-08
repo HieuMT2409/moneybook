@@ -7,6 +7,11 @@ export const envSchema = z.object({
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
   JWT_EXPIRES_IN: z.string().default('1d'),
   CORS_ORIGIN: z.string().default('http://localhost:3000'),
+  // Web Push (optional: without these the API still works, reminders just can't be pushed).
+  // Generate with: npm run vapid:generate -w apps/api
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_SUBJECT: z.string().optional(), // e.g. mailto:you@example.com
 });
 
 export type Env = z.infer<typeof envSchema>;

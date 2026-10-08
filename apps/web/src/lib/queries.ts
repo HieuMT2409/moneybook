@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { api, errorMessage } from './api';
 import type {
   Account, BudgetList, CashFlow, Category, CategoryBreakdown, Dashboard, Debt, EntryType, MonthPoint, NetWorth,
-  Recurring, Summary, TransactionList, TransferList, User,
+  Recurring, Summary, Todo, TransactionList, TransferList, User,
 } from './types';
 
 export type ReportRange = 'this_month' | 'last_month' | 'last_3_months' | 'last_6_months' | 'this_year' | 'custom';
@@ -35,6 +35,9 @@ export const useBudgets = (month: number, year: number) =>
 export const useDebts = () => useQuery({ queryKey: ['debts'], queryFn: () => api<Debt[]>('/debts') });
 export const useDebtDetail = (id: string, enabled: boolean) =>
   useQuery({ queryKey: ['debt', id], queryFn: () => api<Debt>(`/debts/${id}`), enabled });
+/** Polls every minute so reminders and the "overdue" badge stay fresh while the app is open. */
+export const useTodos = (status: 'open' | 'done') =>
+  useQuery({ queryKey: ['todos', status], queryFn: () => api<Todo[]>('/todos', { query: { status } }), refetchInterval: 60_000 });
 export const useRecurring = () => useQuery({ queryKey: ['recurring'], queryFn: () => api<Recurring[]>('/recurring') });
 
 export const useMonthlyReport = (p: ReportParams) =>

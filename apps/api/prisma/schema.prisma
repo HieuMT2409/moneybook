@@ -65,6 +65,8 @@ model User {
   debts                 Debt[]
   debtPayments          DebtPayment[]
   recurringTransactions RecurringTransaction[]
+  todos                 Todo[]
+  pushSubscriptions     PushSubscription[]
 
   @@map("users")
 }
@@ -244,4 +246,43 @@ model RecurringTransaction {
   @@index([isActive, nextRunAt])
   @@index([userId])
   @@map("recurring_transactions")
+}
+
+model Todo {
+  id                  String    @id @default(uuid()) @db.Uuid
+  userId              String    @map("user_id") @db.Uuid
+  title               String
+  note                String?
+  // Instants (not calendar days): the exact moment the task is due, stored in UTC.
+  dueAt               DateTime? @map("due_at")
+  remindBeforeMinutes Int       @default(0) @map("remind_before_minutes")
+  // dueAt - remindBeforeMinutes; the reminder job looks for remindAt <= now AND notifiedAt IS NULL.
+  remindAt            DateTime? @map("remind_at")
+  notifiedAt          DateTime? @map("notified_at")
+  isDone              Boolean   @default(false) @map("is_done")
+  doneAt              DateTime? @map("done_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isDone, dueAt])
+  @@index([isDone, notifiedAt, remindAt])
+  @@map("todos")
+}
+
+// One row per browser/device that agreed to receive push notifications.
+model PushSubscription {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_subscriptions")
 }

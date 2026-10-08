@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/page-header';
 import { Card } from '@/components/ui/card';
 import { useLogout } from '@/lib/auth';
 
-const MORE_ITEMS = NAV_ITEMS.filter((i) => ['/accounts', '/budgets', '/debts', '/settings'].includes(i.href));
+const MORE_ITEMS = NAV_ITEMS.filter((i) => ['/accounts', '/budgets', '/debts', '/todos', '/settings'].includes(i.href));
 
 export default function MorePage() {
   const logout = useLogout();

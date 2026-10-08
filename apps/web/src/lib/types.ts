@@ -59,3 +59,8 @@ export interface NetWorth {
   netWorth: string;
   accounts: Array<{ id: string; name: string; type: AccountType; balance: string }>;
 }
+
+export interface Todo {
+  id: string; title: string; note: string | null; dueAt: string | null; remindBeforeMinutes: number;
+  remindAt: string | null; notifiedAt: string | null; isDone: boolean; doneAt: string | null; createdAt: string;
+}

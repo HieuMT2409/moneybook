@@ -1,9 +1,12 @@
 'use client';
 
-import { BarChart3, HandCoins, LayoutDashboard, LogOut, MoreHorizontal, PiggyBank, Plus, Settings, Wallet, ArrowLeftRight } from 'lucide-react';
+import { ArrowLeftRight, BarChart3, HandCoins, LayoutDashboard, ListTodo, LogOut, MoreHorizontal, PiggyBank, Plus, Settings, Wallet } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuthGate, useLogout } from '@/lib/auth';
+import { usePush } from '@/lib/push';
+import { useTodos } from '@/lib/queries';
+import { useTodoReminderToasts } from '@/lib/use-todo-toasts';
 import { cn } from '@/lib/utils';
 import { TransactionDialogProvider, useTransactionDialog } from './transaction-dialog';
 import { Button } from './ui/button';
@@ -15,6 +18,7 @@ export const NAV_ITEMS = [
   { href: '/accounts', label: 'Tài khoản', icon: Wallet },
   { href: '/budgets', label: 'Ngân sách', icon: PiggyBank },
   { href: '/debts', label: 'Sổ nợ', icon: HandCoins },
+  { href: '/todos', label: 'Việc cần làm', icon: ListTodo },
   { href: '/reports', label: 'Báo cáo', icon: BarChart3 },
   { href: '/settings', label: 'Cài đặt', icon: Settings },
 ] as const;
@@ -40,6 +44,11 @@ function Shell({ children }: { children: React.ReactNode }) {
   const { user } = useAuthGate();
   const logout = useLogout();
   const { openNew } = useTransactionDialog();
+  const todos = useTodos('open');
+  const push = usePush();
+  // Fallback reminders while the app is open, only when phone notifications are not active.
+  useTodoReminderToasts(todos.data, push.state !== 'on' && push.state !== 'loading');
+  const dueCount = (todos.data ?? []).filter((t) => t.dueAt !== null && new Date(t.dueAt).getTime() <= Date.now()).length;
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   return (
@@ -62,6 +71,9 @@ function Shell({ children }: { children: React.ReactNode }) {
             >
               <Icon className="h-4 w-4" />
               {label}
+              {href === '/todos' && dueCount > 0 ? (
+                <span className="ml-auto rounded-full bg-danger px-1.5 text-xs font-semibold text-white">{dueCount}</span>
+              ) : null}
             </Link>
           ))}
         </nav>
@@ -92,16 +104,19 @@ function Shell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
         <MobileLink href="/reports" label="Báo cáo" icon={BarChart3} active={isActive('/reports')} />
-        <MobileLink href="/more" label="Thêm" icon={MoreHorizontal} active={['/more', '/accounts', '/budgets', '/debts', '/settings'].some(isActive)} />
+        <MobileLink href="/more" label="Thêm" icon={MoreHorizontal} badge={dueCount} active={['/more', '/accounts', '/budgets', '/debts', '/todos', '/settings'].some(isActive)} />
       </nav>
     </div>
   );
 }
 
-function MobileLink({ href, label, icon: Icon, active }: { href: string; label: string; icon: typeof Plus; active: boolean }) {
+function MobileLink({ href, label, icon: Icon, active, badge = 0 }: { href: string; label: string; icon: typeof Plus; active: boolean; badge?: number }) {
   return (
     <Link href={href} className={cn('flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium', active ? 'text-primary' : 'text-muted-foreground')}>
-      <Icon className="h-5 w-5" />
+      <span className="relative">
+        <Icon className="h-5 w-5" />
+        {badge > 0 ? <span className="absolute -right-1.5 -top-1 h-2.5 w-2.5 rounded-full bg-danger ring-2 ring-card" aria-label={`${badge} việc đến hạn`} /> : null}
+      </span>
       {label}
     </Link>
   );

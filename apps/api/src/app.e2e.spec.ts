@@ -37,7 +37,7 @@ describe('App (HTTP, no database)', () => {
     expect(res.body).toEqual(expect.objectContaining({ success: true, data: expect.objectContaining({ status: 'ok' }) }));
   });
 
-  it.each(['/accounts', '/transactions', '/dashboard', '/reports/net-worth', '/budgets', '/debts', '/recurring'])(
+  it.each(['/accounts', '/transactions', '/dashboard', '/reports/net-worth', '/budgets', '/debts', '/recurring', '/todos', '/push/public-key'])(
     'GET %s without a token -> 401',
     async (path) => {
       const res = await request(app.getHttpServer()).get(path).expect(401);
