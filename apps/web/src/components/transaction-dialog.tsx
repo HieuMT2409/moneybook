@@ -120,6 +120,9 @@ function TransactionForm({ initialType, editing, onDone }: { initialType: FormTy
     return editing ? api(`/transactions/${editing.id}`, { method: 'PATCH', body }) : api('/transactions', { method: 'POST', body });
   }, editing ? 'Đã cập nhật giao dịch' : 'Đã thêm giao dịch');
 
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const remove = useApiMutation(() => api(`/transactions/${editing?.id ?? ''}`, { method: 'DELETE' }), 'Đã xóa giao dịch');
+
   const onSubmit = handleSubmit(async (values) => {
     await mutation.mutateAsync(values).then(onDone, () => undefined);
   });
@@ -206,6 +209,17 @@ function TransactionForm({ initialType, editing, onDone }: { initialType: FormTy
       <Button type="submit" className="w-full" disabled={mutation.isPending}>
         {mutation.isPending ? 'Đang lưu…' : 'Lưu'}
       </Button>
+      {editing ? (
+        <Button
+          type="button"
+          variant={confirmingDelete ? 'destructive' : 'ghost'}
+          className={cn('w-full', !confirmingDelete && 'text-danger')}
+          disabled={remove.isPending}
+          onClick={() => (confirmingDelete ? remove.mutateAsync().then(onDone, () => undefined) : setConfirmingDelete(true))}
+        >
+          {remove.isPending ? 'Đang xóa…' : confirmingDelete ? 'Bấm lần nữa để xác nhận xóa' : 'Xóa giao dịch'}
+        </Button>
+      ) : null}
     </form>
   );
 }

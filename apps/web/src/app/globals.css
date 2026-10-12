@@ -37,3 +37,25 @@ body {
 }
 
 * { border-color: var(--border); }
+
+/* ---------- Mobile polish ---------- */
+html { -webkit-text-size-adjust: 100%; }
+body { -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
+button, a, select, input, label { touch-action: manipulation; } /* no 300ms double-tap delay */
+
+/* iOS Safari zooms the whole page when a focused field has a font-size under 16px. */
+@media (max-width: 767px) {
+  input, select, textarea { font-size: 16px !important; }
+}
+
+/* iOS gives date inputs an intrinsic width that overflows grids, and renders them blank without a value. */
+input[type="date"], input[type="datetime-local"], input[type="color"] {
+  min-width: 0;
+  max-width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  text-align: left;
+  display: block;
+}
+input[type="date"]::-webkit-date-and-time-value,
+input[type="datetime-local"]::-webkit-date-and-time-value { text-align: left; }

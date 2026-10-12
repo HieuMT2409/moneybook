@@ -129,7 +129,7 @@ function TodoRow({ todo, now, busy, onToggle, onEdit, onDelete }: { todo: Todo; 
       >
         {todo.isDone ? <Check className="h-3.5 w-3.5" /> : null}
       </button>
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 cursor-pointer" onClick={onEdit} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') onEdit(); }}>
         <p className={cn('text-sm font-medium', todo.isDone && 'text-muted-foreground line-through')}>{todo.title}</p>
         {todo.note ? <p className="mt-0.5 whitespace-pre-line text-xs text-muted-foreground">{todo.note}</p> : null}
         {todo.dueAt ? (
@@ -139,7 +139,7 @@ function TodoRow({ todo, now, busy, onToggle, onEdit, onDelete }: { todo: Todo; 
           </p>
         ) : null}
       </div>
-      <div className="flex shrink-0">
+      <div className="hidden shrink-0 md:flex">
         <Button variant="ghost" size="icon" onClick={onEdit} aria-label="Sửa"><Pencil className="h-4 w-4" /></Button>
         <Button variant="ghost" size="icon" onClick={onDelete} aria-label="Xóa"><Trash2 className="h-4 w-4 text-danger" /></Button>
       </div>
@@ -153,6 +153,8 @@ function TodoForm({ todo, onDone }: { todo: Todo | null; onDone: () => void }) {
     defaultValues: { title: todo?.title ?? '', note: todo?.note ?? '', dueAt: todo?.dueAt ? toLocalInput(todo.dueAt) : '', remind: String(todo?.remindBeforeMinutes ?? 0) },
   });
   const hasDue = Boolean(watch('dueAt'));
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const remove = useApiMutation(() => api(`/todos/${todo?.id ?? ''}`, { method: 'DELETE' }), 'Đã xóa việc');
 
   const save = useApiMutation((v: Values) => {
     const body = {
@@ -175,6 +177,17 @@ function TodoForm({ todo, onDone }: { todo: Todo | null; onDone: () => void }) {
         <Select {...register('remind')} disabled={!hasDue}>{Object.entries(REMIND_LABELS).map(([v, label]) => <option key={v} value={v}>{label}</option>)}</Select>
       </Field>
       <Button type="submit" className="w-full" disabled={save.isPending}>{save.isPending ? 'Đang lưu…' : 'Lưu'}</Button>
+      {todo ? (
+        <Button
+          type="button"
+          variant={confirmingDelete ? 'destructive' : 'ghost'}
+          className={cn('w-full', !confirmingDelete && 'text-danger')}
+          disabled={remove.isPending}
+          onClick={() => (confirmingDelete ? remove.mutateAsync().then(onDone, () => undefined) : setConfirmingDelete(true))}
+        >
+          {remove.isPending ? 'Đang xóa…' : confirmingDelete ? 'Bấm lần nữa để xác nhận xóa' : 'Xóa việc này'}
+        </Button>
+      ) : null}
     </form>
   );
 }
