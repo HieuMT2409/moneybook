@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronLeft, ChevronRight, Plus, Search, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Search, SlidersHorizontal, X } from 'lucide-react';
 import { useState } from 'react';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { PageHeader } from '@/components/page-header';
@@ -53,6 +53,7 @@ function EntriesTab() {
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState({ type: '', accountId: '', categoryId: '', from: '', to: '', sort: 'dateDesc' });
   const [toDelete, setToDelete] = useState<Transaction | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
   const debouncedSearch = useDebounce(search);
 
   const query = useTransactions({
@@ -66,6 +67,7 @@ function EntriesTab() {
     setFilters((f) => ({ ...f, [key]: value }));
     setPage(1);
   };
+  const activeFilterCount = [filters.type, filters.accountId, filters.categoryId, filters.from, filters.to].filter(Boolean).length;
   const hasFilters = Boolean(search || filters.type || filters.accountId || filters.categoryId || filters.from || filters.to);
   const reset = () => {
     setSearch('');
@@ -76,12 +78,19 @@ function EntriesTab() {
   const data = query.data;
   return (
     <div className="space-y-4">
-      <Card className="space-y-3 p-4">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Tìm theo ghi chú hoặc danh mục…" className="pl-9" aria-label="Tìm kiếm" />
+      <Card className="space-y-3 p-3 md:p-4">
+        <div className="flex gap-2">
+          <div className="relative min-w-0 flex-1">
+            <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Tìm ghi chú, danh mục…" className="pl-9" aria-label="Tìm kiếm" />
+          </div>
+          <Button variant="outline" className="shrink-0 md:hidden" onClick={() => setShowFilters((v) => !v)} aria-expanded={showFilters}>
+            <SlidersHorizontal className="h-4 w-4" /> Lọc
+            {activeFilterCount > 0 ? <span className="rounded-full bg-primary px-1.5 text-xs text-primary-foreground">{activeFilterCount}</span> : null}
+          </Button>
         </div>
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+        {/* Phones: filters are tucked behind the "Lọc" button; desktop always shows them. */}
+        <div className={cn('grid grid-cols-2 gap-2 md:grid-cols-4', !showFilters && 'hidden md:grid')}>
           <Select value={filters.type} onChange={(e) => setFilter('type', e.target.value)} aria-label="Loại">
             <option value="">Tất cả loại</option>
             <option value="INCOME">Thu nhập</option>
@@ -98,10 +107,16 @@ function EntriesTab() {
           <Select value={filters.sort} onChange={(e) => setFilter('sort', e.target.value)} aria-label="Sắp xếp">
             {Object.entries(SORTS).map(([key, s]) => <option key={key} value={key}>{s.label}</option>)}
           </Select>
-          <Input type="date" value={filters.from} onChange={(e) => setFilter('from', e.target.value)} aria-label="Từ ngày" />
-          <Input type="date" value={filters.to} onChange={(e) => setFilter('to', e.target.value)} aria-label="Đến ngày" />
+          <label className="min-w-0 space-y-1">
+            <span className="text-xs text-muted-foreground">Từ ngày</span>
+            <Input type="date" value={filters.from} onChange={(e) => setFilter('from', e.target.value)} />
+          </label>
+          <label className="min-w-0 space-y-1">
+            <span className="text-xs text-muted-foreground">Đến ngày</span>
+            <Input type="date" value={filters.to} onChange={(e) => setFilter('to', e.target.value)} />
+          </label>
           {hasFilters ? (
-            <Button variant="outline" onClick={reset} className="col-span-2 md:col-span-1">
+            <Button variant="outline" onClick={reset} className="col-span-2 md:col-span-1 md:self-end">
               <X className="h-4 w-4" /> Xóa bộ lọc
             </Button>
           ) : null}
